@@ -144,9 +144,15 @@ class EntityCard extends StatelessWidget {
                 onTap: onViewDetails,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('View details', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor)),
+                    Flexible(
+                      child: Text(
+                        'View details',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     Icon(Icons.chevron_right, size: 14, color: accentColor),
                   ],
                 ),

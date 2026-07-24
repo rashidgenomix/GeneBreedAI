@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/game_provider.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
+
+final _accent = moduleTheme(ModuleId.games).color;
 
 class _Round {
   final String parentA;
@@ -90,21 +93,22 @@ class _TraitPredictionGameState extends State<TraitPredictionGame> {
   @override
   Widget build(BuildContext context) {
     final round = _buildRound(seed);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Trait Prediction', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const Expanded(child: Text('Trait Prediction', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
               TextButton(onPressed: widget.onExit, child: const Text('← Back to Games')),
             ],
           ),
           Pill('Score: $score/$roundsPlayed', tone: PillTone.info),
           const SizedBox(height: 10),
           AppCard(
+            accentColor: _accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

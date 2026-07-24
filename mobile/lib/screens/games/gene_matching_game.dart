@@ -89,16 +89,16 @@ class _GeneMatchingGameState extends State<GeneMatchingGame> {
   Widget build(BuildContext context) {
     final matchedCount = tiles.where((t) => t.matched).length;
     final won = matchedCount == tiles.length;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Gene Matching', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const Expanded(child: Text('Gene Matching', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
               TextButton(onPressed: widget.onExit, child: const Text('← Back to Games')),
             ],
           ),

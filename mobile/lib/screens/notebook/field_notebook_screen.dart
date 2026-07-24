@@ -99,14 +99,16 @@ class _FieldNotebookScreenState extends State<FieldNotebookScreen> {
                 CardTitle('New Observation'),
                 DropdownButtonFormField<String>(
                   initialValue: cropId,
-                  items: [for (final c in crops) DropdownMenuItem(value: c.id, child: Text('${c.emoji} ${c.name}'))],
+                  isExpanded: true,
+                  items: [for (final c in crops) DropdownMenuItem(value: c.id, child: Text('${c.emoji} ${c.name}', overflow: TextOverflow.ellipsis))],
                   onChanged: (v) => setState(() => cropId = v!),
                   decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: observationType,
-                  items: [for (final t in _types) DropdownMenuItem(value: t.$1, child: Text(t.$2))],
+                  isExpanded: true,
+                  items: [for (final t in _types) DropdownMenuItem(value: t.$1, child: Text(t.$2, overflow: TextOverflow.ellipsis))],
                   onChanged: (v) => setState(() => observationType = v!),
                   decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
                 ),

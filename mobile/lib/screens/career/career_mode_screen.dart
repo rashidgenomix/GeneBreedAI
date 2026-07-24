@@ -187,12 +187,15 @@ class CareerModeScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: _accent),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: AppText.statLabel),
-              Text(value, style: AppText.statValue),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: AppText.statLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(value, style: AppText.statValue, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
           ),
         ],
       ),

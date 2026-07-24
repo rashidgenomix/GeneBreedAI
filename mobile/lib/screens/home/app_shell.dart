@@ -82,7 +82,14 @@ class AppShell extends StatelessWidget {
                 children: [
                   Icon(moduleTheme(currentModule!).icon, color: accent, size: 20),
                   const SizedBox(width: 8),
-                  Text(moduleTheme(currentModule).label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  Flexible(
+                    child: Text(
+                      moduleTheme(currentModule).label,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
         actions: [
