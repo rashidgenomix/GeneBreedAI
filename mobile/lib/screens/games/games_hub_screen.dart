@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
 import 'trait_prediction_game.dart';
 import 'gene_matching_game.dart';
+import 'dna_puzzle_game.dart';
+import 'chromosome_assembly_game.dart';
+import 'mutation_challenge_game.dart';
+import 'pedigree_puzzle_game.dart';
+import 'genome_mapping_game.dart';
+import 'breeding_escape_room_game.dart';
+
+final _accent = moduleTheme(ModuleId.games).color;
 
 class _GameInfo {
   final String id;
   final String name;
   final IconData icon;
-  final bool ready;
   final String description;
-  const _GameInfo(this.id, this.name, this.icon, this.ready, this.description);
+  const _GameInfo(this.id, this.name, this.icon, this.description);
 }
 
 const List<_GameInfo> _games = [
-  _GameInfo('trait-prediction', 'Trait Prediction', Icons.shuffle, true, 'Predict Punnett-square offspring ratios from parent genotypes.'),
-  _GameInfo('gene-matching', 'Gene Matching', Icons.extension, true, 'Match gene symbols to their biological function.'),
-  _GameInfo('dna-puzzle', 'DNA Puzzle', Icons.biotech, false, 'Assemble a DNA sequence from overlapping reads.'),
-  _GameInfo('chromosome-assembly', 'Chromosome Assembly', Icons.account_tree, false, 'Order gene markers along a chromosome by recombination distance.'),
-  _GameInfo('mutation-challenge', 'Mutation Challenge', Icons.dangerous, false, 'Identify which mutation type produced a given phenotype.'),
-  _GameInfo('escape-room', 'Breeding Escape Room', Icons.meeting_room, false, 'Solve a chain of breeding puzzles to escape the lab before the season ends.'),
-  _GameInfo('pedigree-puzzle', 'Pedigree Puzzle', Icons.account_tree, false, 'Deduce inheritance patterns from a family pedigree chart.'),
-  _GameInfo('genome-mapping', 'Genome Mapping', Icons.map, false, 'Place genes on a chromosome map using linkage data.'),
+  _GameInfo('trait-prediction', 'Trait Prediction', Icons.shuffle, 'Predict Punnett-square offspring ratios from parent genotypes.'),
+  _GameInfo('gene-matching', 'Gene Matching', Icons.extension, 'Match gene symbols to their biological function.'),
+  _GameInfo('dna-puzzle', 'DNA Puzzle', Icons.biotech, 'Drag sequencing reads into order to assemble a DNA sequence.'),
+  _GameInfo('chromosome-assembly', 'Chromosome Assembly', Icons.account_tree, 'Drag markers onto a linkage map by recombination distance.'),
+  _GameInfo('mutation-challenge', 'Mutation Challenge', Icons.dangerous, 'Tap to compare sequences and classify the mutation type.'),
+  _GameInfo('escape-room', 'Breeding Escape Room', Icons.meeting_room, 'Chain three puzzles to escape the lab before the season ends.'),
+  _GameInfo('pedigree-puzzle', 'Pedigree Puzzle', Icons.diversity_1, 'Read a visual family tree to deduce the inheritance pattern.'),
+  _GameInfo('genome-mapping', 'Genome Mapping', Icons.map, 'Slide genes into position on a chromosome ruler by linkage distance.'),
 ];
 
 class GamesHubScreen extends StatefulWidget {
@@ -34,45 +43,50 @@ class GamesHubScreen extends StatefulWidget {
 class _GamesHubScreenState extends State<GamesHubScreen> {
   String? active;
 
+  void _exit() => setState(() => active = null);
+
   @override
   Widget build(BuildContext context) {
-    if (active == 'trait-prediction') return TraitPredictionGame(onExit: () => setState(() => active = null));
-    if (active == 'gene-matching') return GeneMatchingGame(onExit: () => setState(() => active = null));
+    switch (active) {
+      case 'trait-prediction':
+        return TraitPredictionGame(onExit: _exit);
+      case 'gene-matching':
+        return GeneMatchingGame(onExit: _exit);
+      case 'dna-puzzle':
+        return DnaPuzzleGame(onExit: _exit);
+      case 'chromosome-assembly':
+        return ChromosomeAssemblyGame(onExit: _exit);
+      case 'mutation-challenge':
+        return MutationChallengeGame(onExit: _exit);
+      case 'pedigree-puzzle':
+        return PedigreePuzzleGame(onExit: _exit);
+      case 'genome-mapping':
+        return GenomeMappingGame(onExit: _exit);
+      case 'escape-room':
+        return BreedingEscapeRoomGame(onExit: _exit);
+    }
 
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('🎮 Genetics Games', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text('Sharpen your genetics intuition through fast, replayable challenges.', style: TextStyle(fontSize: 13)),
-          const SizedBox(height: 12),
+          Text('Sharpen your genetics intuition through fast, replayable, hands-on challenges.', style: AppText.body),
+          const SizedBox(height: AppSpacing.md),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _games.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.9),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.95),
             itemBuilder: (context, i) {
               final g = _games[i];
-              return Opacity(
-                opacity: g.ready ? 1 : 0.5,
-                child: AppCard(
-                  child: InkWell(
-                    onTap: g.ready ? () => setState(() => active = g.id) : null,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(g.icon, color: const Color(0xFF059669), size: 24),
-                        const SizedBox(height: 6),
-                        Text(g.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Expanded(child: Text(g.description, style: const TextStyle(fontSize: 11), overflow: TextOverflow.fade)),
-                        Pill(g.ready ? 'Play now' : 'Coming soon', tone: g.ready ? PillTone.good : PillTone.neutral),
-                      ],
-                    ),
-                  ),
-                ),
+              return EntityCard(
+                icon: g.icon,
+                accentColor: _accent,
+                title: g.name,
+                description: g.description,
+                onTap: () => setState(() => active = g.id),
               );
             },
           ),
