@@ -70,16 +70,21 @@ class StageNode extends StatelessWidget {
 class StageConnector extends StatelessWidget {
   final bool completed;
   final Color accentColor;
-  const StageConnector({super.key, required this.completed, required this.accentColor});
+
+  /// Explicit width rather than [Expanded] — a stage map is as often a horizontally
+  /// scrolling [ListView] (not a [Flex]) as it is a fixed-width [Row], and connectors
+  /// need to work in both without relying on a Flex ancestor.
+  final double width;
+
+  const StageConnector({super.key, required this.completed, required this.accentColor, this.width = 28});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        height: 3,
-        margin: const EdgeInsets.only(bottom: 22),
-        color: completed ? accentColor : Colors.grey.withValues(alpha: 0.3),
-      ),
+    return Container(
+      width: width,
+      height: 3,
+      margin: const EdgeInsets.only(bottom: 22),
+      color: completed ? accentColor : Colors.grey.withValues(alpha: 0.3),
     );
   }
 }

@@ -6,7 +6,12 @@ import 'package:image_picker/image_picker.dart';
 import '../../data/crops.dart';
 import '../../state/game_provider.dart';
 import '../../state/notebook_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/detail_sheet.dart';
+
+final _accent = moduleTheme(ModuleId.notebook).color;
 
 const _types = [
   ('flowering', 'Flowering date'),
@@ -55,20 +60,39 @@ class _FieldNotebookScreenState extends State<FieldNotebookScreen> {
     });
   }
 
+  void _showEntryDetails(NotebookEntry e) {
+    showDetailSheet(
+      context,
+      title: _types.firstWhere((t) => t.$1 == e.observationType).$2,
+      subtitle: '${crops.firstWhere((c) => c.id == e.cropId).name} · ${e.date}',
+      icon: Icons.edit_note,
+      accentColor: _accent,
+      children: [
+        if (e.imagePath != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: ClipRRect(borderRadius: BorderRadius.circular(AppRadius.md), child: Image.file(File(e.imagePath!), height: 180, width: double.infinity, fit: BoxFit.cover)),
+          ),
+        DetailSection(label: 'Value', text: e.value),
+        if (e.notes.isNotEmpty) DetailSection(label: 'Notes', text: e.notes),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final entries = context.watch<NotebookProvider>().entries;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('📓 Field Notebook', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text('Record real observations from your virtual field trials.', style: TextStyle(fontSize: 13)),
-          const SizedBox(height: 12),
+          Text('Record real observations from your virtual field trials.', style: AppText.body),
+          const SizedBox(height: AppSpacing.md),
           AppCard(
+            accentColor: _accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -101,50 +125,63 @@ class _FieldNotebookScreenState extends State<FieldNotebookScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Entries (${entries.length})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text('Entries (${entries.length})', style: AppText.sectionTitle),
               OutlinedButton.icon(
                 onPressed: () => setState(() => showReport = !showReport),
                 icon: const Icon(Icons.description, size: 16),
-                label: Text('${showReport ? "Hide" : "Generate"} Report'),
+                label: Text(showReport ? 'Hide' : 'Report'),
               ),
             ],
           ),
           if (showReport) _buildReport(entries),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           if (entries.isEmpty) const Text('No entries yet — record your first observation above.', style: TextStyle(fontSize: 12, color: Colors.grey)),
           for (final e in entries)
-            AppCard(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (e.imagePath != null) ...[
-                    ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(e.imagePath!), width: 52, height: 52, fit: BoxFit.cover)),
-                    const SizedBox(width: 10),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          Text(crops.firstWhere((c) => c.id == e.cropId).emoji),
-                          const SizedBox(width: 4),
-                          Expanded(child: Text(_types.firstWhere((t) => t.$1 == e.observationType).$2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
-                          Pill(e.date),
-                        ]),
-                        Text(e.value, style: const TextStyle(fontSize: 13)),
-                        if (e.notes.isNotEmpty) Text(e.notes, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: AppCard(
+                child: InkWell(
+                  onTap: () => _showEntryDetails(e),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (e.imagePath != null) ...[
+                        ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(e.imagePath!), width: 44, height: 44, fit: BoxFit.cover)),
+                        const SizedBox(width: 10),
+                      ] else ...[
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(color: _accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                          child: Icon(Icons.edit_note, color: _accent, size: 20),
+                        ),
+                        const SizedBox(width: 10),
                       ],
-                    ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              Text(crops.firstWhere((c) => c.id == e.cropId).emoji),
+                              const SizedBox(width: 4),
+                              Expanded(child: Text(_types.firstWhere((t) => t.$1 == e.observationType).$2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13), overflow: TextOverflow.ellipsis)),
+                              Pill(e.date),
+                            ]),
+                            Text(e.value, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 16, color: AppColors.bad),
+                        onPressed: () => context.read<NotebookProvider>().removeEntry(e.id),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, size: 16, color: Color(0xFFF43F5E)),
-                    onPressed: () => context.read<NotebookProvider>().removeEntry(e.id),
-                  ),
-                ],
+                ),
               ),
             ),
         ],
@@ -158,13 +195,14 @@ class _FieldNotebookScreenState extends State<FieldNotebookScreen> {
       byCrop[e.cropId] = (byCrop[e.cropId] ?? 0) + 1;
     }
     return AppCard(
+      accentColor: _accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CardTitle('Auto-generated Summary Report'),
-          Text('Total observations: ${entries.length}', style: const TextStyle(fontSize: 13)),
+          Text('Total observations: ${entries.length}', style: AppText.body),
           const SizedBox(height: 6),
-          for (final entry in byCrop.entries) Text('• ${crops.firstWhere((c) => c.id == entry.key).name}: ${entry.value} observations', style: const TextStyle(fontSize: 12)),
+          for (final entry in byCrop.entries) Text('• ${crops.firstWhere((c) => c.id == entry.key).name}: ${entry.value} observations', style: AppText.caption),
         ],
       ),
     );

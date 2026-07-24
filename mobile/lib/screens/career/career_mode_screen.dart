@@ -1,59 +1,73 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import 'package:provider/provider.dart';
 
 import '../../data/gamification.dart';
 import '../../data/missions.dart';
 import '../../state/game_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/detail_sheet.dart';
 import '../../widgets/icon_map.dart';
+import '../../widgets/stage_node.dart';
+import '../../widgets/status_state.dart';
+
+final _accent = moduleTheme(ModuleId.career).color;
 
 class CareerModeScreen extends StatelessWidget {
   const CareerModeScreen({super.key});
+
+  void _showBadgeDetails(BuildContext context, Badge b, bool unlocked) {
+    showDetailSheet(
+      context,
+      title: b.name,
+      subtitle: unlocked ? 'Unlocked' : 'Locked',
+      icon: iconForName(b.icon),
+      accentColor: _accent,
+      children: [DetailSection(label: 'How to earn it', text: b.description)],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final game = context.watch<GameProvider>();
     final level = game.levelInfo.level;
     final rank = game.rank;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('🏆 Career Mode', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text('Progress from Student to Chief Plant Breeder by earning XP, badges, publications, and grants.', style: TextStyle(fontSize: 13)),
-          const SizedBox(height: 12),
+          Text('Progress from Student to Chief Plant Breeder by earning XP, badges, publications, and grants.', style: AppText.body),
+          const SizedBox(height: AppSpacing.md),
           AppCard(
+            accentColor: _accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CardTitle('Career Ladder'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final r in careerRanks)
-                      Container(
-                        width: 140,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: rank.id == r.id ? const Color(0x2210B981) : (level >= r.minLevel ? const Color(0x1010B981) : Colors.black.withValues(alpha: 0.04)),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: rank.id == r.id ? const Color(0xFF059669) : Colors.black12),
+                SizedBox(
+                  height: 90,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (var i = 0; i < careerRanks.length; i++) ...[
+                        StageNode(
+                          label: careerRanks[i].title,
+                          accentColor: _accent,
+                          size: 52,
+                          status: rank.id == careerRanks[i].id
+                              ? StatusState.inProgress
+                              : (level >= careerRanks[i].minLevel ? StatusState.completed : StatusState.locked),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(r.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                            Text('Level ${r.minLevel}+', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                  ],
+                        if (i < careerRanks.length - 1) StageConnector(completed: level >= careerRanks[i + 1].minLevel, accentColor: _accent),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -62,13 +76,13 @@ class CareerModeScreen extends StatelessWidget {
                   mainAxisSpacing: 8,
                   crossAxisSpacing: 8,
                   children: [
-                    _stat(Icons.emoji_events, 'Level', '$level'),
-                    _stat(Icons.military_tech, 'Total XP', '${game.totalXp}'),
-                    _stat(Icons.menu_book, 'Publications', '${game.publications}'),
-                    _stat(Icons.account_balance, 'Grants', '${game.grants}'),
+                    _statTile(Icons.emoji_events, 'Level', '$level'),
+                    _statTile(Icons.military_tech, 'Total XP', '${game.totalXp}'),
+                    _statTile(Icons.menu_book, 'Publications', '${game.publications}'),
+                    _statTile(Icons.account_balance, 'Grants', '${game.grants}'),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   OutlinedButton.icon(
                     onPressed: () {
@@ -90,103 +104,94 @@ class CareerModeScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CardTitle('Missions'),
-                for (final m in missions)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: game.completedMissionIds.contains(m.id) ? const Color(0x1210B981) : Colors.black.withValues(alpha: 0.03),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
+          const SizedBox(height: AppSpacing.md),
+          Text('Missions', style: AppText.sectionTitle),
+          const SizedBox(height: AppSpacing.sm),
+          for (final m in missions)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: AppCard(
+                accentColor: game.completedMissionIds.contains(m.id) ? _accent : null,
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    StatusBadge(status: game.completedMissionIds.contains(m.id) ? StatusState.completed : StatusState.available, compact: true),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(children: [
-                                  Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                                  const SizedBox(width: 6),
-                                  Pill(m.type, tone: m.type == 'weekly' ? PillTone.info : PillTone.neutral),
-                                ]),
-                                Text(m.description, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: game.completedMissionIds.contains(m.id) ? null : () => game.completeMission(m.id),
-                            child: Text(game.completedMissionIds.contains(m.id) ? 'Done' : '+${m.xp} XP'),
-                          ),
+                          Row(children: [
+                            Expanded(child: Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+                            const SizedBox(width: 6),
+                            Pill(m.type, tone: m.type == 'weekly' ? PillTone.info : PillTone.neutral),
+                          ]),
+                          Text(m.description, style: AppText.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CardTitle('Badges (${game.unlockedBadgeIds.length}/${badges.length})'),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: badges.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.85),
-                  itemBuilder: (context, i) {
-                    final b = badges[i];
-                    final unlocked = game.unlockedBadgeIds.contains(b.id);
-                    return Opacity(
-                      opacity: unlocked ? 1 : 0.4,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: unlocked ? const Color(0x1210B981) : Colors.black.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: unlocked ? const Color(0xFF059669) : Colors.black12),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(iconForName(b.icon), color: unlocked ? const Color(0xFF059669) : Colors.grey, size: 22),
-                            const SizedBox(height: 4),
-                            Text(b.name, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                    ElevatedButton(
+                      onPressed: game.completedMissionIds.contains(m.id) ? null : () => game.completeMission(m.id),
+                      child: Text(game.completedMissionIds.contains(m.id) ? 'Done' : '+${m.xp} XP'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
+          const SizedBox(height: AppSpacing.md),
+          Text('Badges (${game.unlockedBadgeIds.length}/${badges.length})', style: AppText.sectionTitle),
+          const SizedBox(height: AppSpacing.sm),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: badges.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.85),
+            itemBuilder: (context, i) {
+              final b = badges[i];
+              final unlocked = game.unlockedBadgeIds.contains(b.id);
+              return Opacity(
+                opacity: unlocked ? 1 : 0.45,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  onTap: () => _showBadgeDetails(context, b, unlocked),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: unlocked ? _accent.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: unlocked ? _accent : Colors.black12),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(iconForName(b.icon), color: unlocked ? _accent : Colors.grey, size: 22),
+                        const SizedBox(height: 4),
+                        Text(b.name, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _stat(IconData icon, String label, String value) {
+  Widget _statTile(IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: _accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.sm)),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF059669)),
+          Icon(icon, size: 18, color: _accent),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-              Text(value, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w700)),
+              Text(label, style: AppText.statLabel),
+              Text(value, style: AppText.statValue),
             ],
           ),
         ],
