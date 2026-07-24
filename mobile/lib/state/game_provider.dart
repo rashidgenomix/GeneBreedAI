@@ -28,6 +28,7 @@ class GameProvider extends ChangeNotifier {
   List<String> completedMissionIds = [];
   int dailyStreak = 0;
   String? _lastActiveDate; // yyyy-MM-dd
+  List<String> completedVivaStages = []; // "topicId:stage" keys
 
   bool _loaded = false;
   bool get loaded => _loaded;
@@ -46,6 +47,7 @@ class GameProvider extends ChangeNotifier {
       completedMissionIds = List<String>.from(json['completedMissionIds'] ?? []);
       dailyStreak = json['dailyStreak'] ?? 0;
       _lastActiveDate = json['lastActiveDate'];
+      completedVivaStages = List<String>.from(json['completedVivaStages'] ?? []);
     }
     _touchStreak();
     _loaded = true;
@@ -81,6 +83,7 @@ class GameProvider extends ChangeNotifier {
       'completedMissionIds': completedMissionIds,
       'dailyStreak': dailyStreak,
       'lastActiveDate': _lastActiveDate,
+      'completedVivaStages': completedVivaStages,
     };
     await prefs.setString(_prefsKey, jsonEncode(json));
   }
@@ -120,6 +123,16 @@ class GameProvider extends ChangeNotifier {
   void completeMission(String id) {
     if (completedMissionIds.contains(id)) return;
     completedMissionIds = [...completedMissionIds, id];
+    notifyListeners();
+    _persist();
+  }
+
+  bool isVivaStageComplete(String topicId, int stage) => completedVivaStages.contains('$topicId:$stage');
+
+  void completeVivaStage(String topicId, int stage) {
+    final key = '$topicId:$stage';
+    if (completedVivaStages.contains(key)) return;
+    completedVivaStages = [...completedVivaStages, key];
     notifyListeners();
     _persist();
   }
