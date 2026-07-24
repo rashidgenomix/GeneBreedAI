@@ -8,11 +8,17 @@ import '../../data/field_events.dart';
 import '../../models/types.dart';
 import '../../engine/genetics.dart';
 import '../../state/game_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/detail_sheet.dart';
+import '../../widgets/status_state.dart';
 import '../../widgets/trait_bar.dart';
 import '../../widgets/icon_map.dart';
 
 enum _Step { crop, parents, method, generations, release }
+
+final _accent = moduleTheme(ModuleId.breeder).color;
 
 class BreederScreen extends StatefulWidget {
   const BreederScreen({super.key});
@@ -122,33 +128,21 @@ class _BreederScreenState extends State<BreederScreen> {
   Widget build(BuildContext context) {
     final methodInfo = method != null ? getBreedingMethod(method!) : null;
     final targetGenerations = methodInfo?.generationsToStability ?? 6;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('🌾 AI Plant Breeder Simulator', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                    SizedBox(height: 4),
-                    Text('Select parents, choose a method, and steer generations through real field challenges toward a released variety.',
-                        style: TextStyle(fontSize: 13)),
-                  ],
-                ),
-              ),
+              Expanded(child: _buildStepper()),
               if (step != _Step.crop)
-                TextButton.icon(onPressed: _reset, icon: const Icon(Icons.chevron_left, size: 16), label: const Text('Start Over')),
+                TextButton.icon(onPressed: _reset, icon: const Icon(Icons.refresh, size: 16), label: const Text('Restart')),
             ],
           ),
-          const SizedBox(height: 12),
-          _buildStepper(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           if (step == _Step.crop) _buildCropStep(),
           if (step == _Step.parents && crop != null) _buildParentStep(),
           if (step == _Step.method && crop != null && parentA != null && parentB != null) _buildMethodStep(),
@@ -162,24 +156,29 @@ class _BreederScreenState extends State<BreederScreen> {
 
   Widget _buildStepper() {
     final steps = [
-      (_Step.crop, '1. Crop'),
-      (_Step.parents, '2. Parents'),
-      (_Step.method, '3. Method'),
-      (_Step.generations, '4. Grow & Select'),
-      (_Step.release, '5. Release'),
+      (_Step.crop, Icons.eco, 'Crop'),
+      (_Step.parents, Icons.diversity_3, 'Parents'),
+      (_Step.method, Icons.alt_route, 'Method'),
+      (_Step.generations, Icons.grain, 'Grow'),
+      (_Step.release, Icons.emoji_events, 'Release'),
     ];
     final idx = steps.indexWhere((s) => s.$1 == step);
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+    return Row(
       children: [
-        for (var i = 0; i < steps.length; i++)
-          Chip(
-            label: Text(steps[i].$2, style: TextStyle(fontSize: 11, color: i == idx ? Colors.white : null)),
-            backgroundColor: i == idx ? const Color(0xFF059669) : (i < idx ? const Color(0x2210B981) : Colors.black.withValues(alpha: 0.05)),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
+        for (var i = 0; i < steps.length; i++) ...[
+          Column(
+            children: [
+              CircleAvatar(
+                radius: 15,
+                backgroundColor: i <= idx ? _accent : Colors.black.withValues(alpha: 0.08),
+                child: Icon(steps[i].$2, size: 15, color: i <= idx ? Colors.white : Colors.grey),
+              ),
+              const SizedBox(height: 2),
+              Text(steps[i].$3, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: i == idx ? _accent : Colors.grey)),
+            ],
           ),
+          if (i < steps.length - 1) Expanded(child: Container(height: 2, margin: const EdgeInsets.only(bottom: 14), color: i < idx ? _accent : Colors.black.withValues(alpha: 0.08))),
+        ],
       ],
     );
   }
@@ -189,30 +188,36 @@ class _BreederScreenState extends State<BreederScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: crops.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.85),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.95),
       itemBuilder: (context, i) {
         final c = crops[i];
-        return AppCard(
-          child: InkWell(
-            onTap: () => setState(() {
-              crop = c;
-              step = _Step.parents;
-            }),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(c.emoji, style: const TextStyle(fontSize: 32)),
-                const SizedBox(height: 6),
-                Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                Text(c.scientificName, style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic)),
-                const SizedBox(height: 6),
-                Expanded(child: Text(c.description, style: const TextStyle(fontSize: 11), overflow: TextOverflow.fade)),
-                Pill('${c.germplasm.length} lines', tone: PillTone.info),
-              ],
-            ),
-          ),
+        return EntityCard(
+          icon: Icons.eco,
+          accentColor: _accent,
+          title: '${c.emoji} ${c.name}',
+          description: '${c.germplasm.length} germplasm lines',
+          onTap: () => setState(() {
+            crop = c;
+            step = _Step.parents;
+          }),
+          onViewDetails: () => _showCropDetails(c),
         );
       },
+    );
+  }
+
+  void _showCropDetails(Crop c) {
+    showDetailSheet(
+      context,
+      title: c.name,
+      subtitle: c.scientificName,
+      icon: Icons.eco,
+      accentColor: _accent,
+      children: [
+        DetailSection(label: 'About', text: c.description),
+        DetailSection(label: 'Genome', text: '${c.chromosomeNumber} chromosomes · ${c.genomeSizeMb.toStringAsFixed(0)} Mb genome size'),
+        DetailBulletList(label: 'Environments', items: [for (final e in c.environments) '${e.name} — ${e.description}'], bulletColor: _accent),
+      ],
     );
   }
 
@@ -220,26 +225,27 @@ class _BreederScreenState extends State<BreederScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Explore the ${crop!.name} germplasm collection and choose two parents to cross.', style: const TextStyle(fontSize: 13)),
-        const SizedBox(height: 10),
+        Text('Explore the ${crop!.name} germplasm collection and choose two parents to cross.', style: AppText.body),
+        const SizedBox(height: AppSpacing.md),
         _parentPicker('Parent A', parentA, (g) => setState(() => parentA = g)),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.md),
         _parentPicker('Parent B', parentB, (g) => setState(() => parentB = g)),
         if (parentA != null && parentB != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           AppCard(
+            accentColor: _accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CardTitle('Trait Comparison'),
-                Text('${parentA!.name} vs ${parentB!.name}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                const SizedBox(height: 8),
+                Text('${parentA!.name} vs ${parentB!.name}', style: AppText.caption),
+                const SizedBox(height: AppSpacing.sm),
                 Text(parentA!.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                 for (final t in crop!.traits) TraitBarWidget(trait: t, value: parentA!.traitValues[t.id] ?? 0.5, compareValue: parentB!.traitValues[t.id]),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(parentB!.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                 for (final t in crop!.traits) TraitBarWidget(trait: t, value: parentB!.traitValues[t.id] ?? 0.5, compareValue: parentA!.traitValues[t.id]),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.md),
                 ElevatedButton(onPressed: () => setState(() => step = _Step.method), child: const Text('Choose Breeding Method →')),
               ],
             ),
@@ -251,12 +257,13 @@ class _BreederScreenState extends State<BreederScreen> {
 
   Widget _parentPicker(String label, Germplasm? selected, void Function(Germplasm) onPick) {
     return AppCard(
+      accentColor: _accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CardTitle(label),
           SizedBox(
-            height: 180,
+            height: 200,
             child: ListView.builder(
               itemCount: crop!.germplasm.length,
               itemBuilder: (context, i) {
@@ -264,13 +271,17 @@ class _BreederScreenState extends State<BreederScreen> {
                 final isSelected = selected?.id == g.id;
                 return Card(
                   margin: const EdgeInsets.only(bottom: 6),
-                  color: isSelected ? const Color(0x2210B981) : null,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isSelected ? const Color(0xFF059669) : Colors.black12)),
+                  color: isSelected ? _accent.withValues(alpha: 0.12) : null,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm), side: BorderSide(color: isSelected ? _accent : Colors.black12)),
                   child: ListTile(
                     dense: true,
                     onTap: () => onPick(g),
                     title: Text(g.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    subtitle: Text(g.origin, style: const TextStyle(fontSize: 11)),
+                    subtitle: Text(g.origin, style: AppText.caption),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      onPressed: () => _showGermplasmDetails(g),
+                    ),
                   ),
                 );
               },
@@ -281,44 +292,64 @@ class _BreederScreenState extends State<BreederScreen> {
     );
   }
 
+  void _showGermplasmDetails(Germplasm g) {
+    showDetailSheet(
+      context,
+      title: g.name,
+      subtitle: g.origin,
+      icon: Icons.eco,
+      accentColor: _accent,
+      children: [
+        DetailSection(label: 'Description', text: g.description),
+        DetailBulletList(label: 'Tags', items: g.tags, bulletColor: _accent),
+        const SizedBox(height: AppSpacing.sm),
+        Text('TRAIT PROFILE', style: AppText.statLabel),
+        const SizedBox(height: 4),
+        for (final t in crop!.traits) TraitBarWidget(trait: t, value: g.traitValues[t.id] ?? 0.5),
+      ],
+    );
+  }
+
   Widget _buildMethodStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Every breeding method trades off speed, cost, and precision.', style: TextStyle(fontSize: 13)),
-        const SizedBox(height: 10),
+        Text('Every breeding method trades off speed, cost, and precision. Tap a card to select it.', style: AppText.body),
+        const SizedBox(height: AppSpacing.md),
         for (final m in breedingMethods)
-          AppCard(
-            padding: const EdgeInsets.all(12),
-            child: InkWell(
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: EntityCard(
+              icon: Icons.alt_route,
+              accentColor: _accent,
+              title: m.name,
+              description: m.summary,
+              status: method == m.id ? StatusState.completed : null,
               onTap: () => setState(() => method = m.id),
-              child: Container(
-                decoration: method == m.id ? BoxDecoration(border: Border.all(color: const Color(0xFF059669), width: 2), borderRadius: BorderRadius.circular(12)) : null,
-                padding: const EdgeInsets.all(4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CardTitle(m.name),
-                    Text(m.summary, style: const TextStyle(fontSize: 12)),
-                    const SizedBox(height: 6),
-                    Text('Advantages', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green.shade700)),
-                    for (final a in m.advantages) Text('• $a', style: const TextStyle(fontSize: 11)),
-                    const SizedBox(height: 4),
-                    Text('Limitations', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.red.shade400)),
-                    for (final a in m.limitations) Text('• $a', style: const TextStyle(fontSize: 11)),
-                    const SizedBox(height: 6),
-                    Pill('~${m.generationsToStability} generations', tone: PillTone.info),
-                  ],
-                ),
-              ),
+              onViewDetails: () => _showMethodDetails(m),
             ),
           ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         ElevatedButton.icon(
           onPressed: method != null ? _doHybridize : null,
           icon: const Icon(Icons.auto_awesome, size: 16),
           label: const Text('Perform Hybridization'),
         ),
+      ],
+    );
+  }
+
+  void _showMethodDetails(BreedingMethodInfo m) {
+    showDetailSheet(
+      context,
+      title: m.name,
+      subtitle: '~${m.generationsToStability} generations to stability',
+      icon: Icons.alt_route,
+      accentColor: _accent,
+      children: [
+        DetailSection(label: 'Summary', text: m.summary),
+        DetailBulletList(label: 'Advantages', items: m.advantages, bulletColor: AppColors.good),
+        DetailBulletList(label: 'Limitations', items: m.limitations, bulletColor: AppColors.bad),
       ],
     );
   }
@@ -334,31 +365,35 @@ class _BreederScreenState extends State<BreederScreen> {
       children: [
         if (activeEvent != null)
           AppCard(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(iconForName(activeEvent!.icon), color: Colors.amber.shade700),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Text('Field Event: ${activeEvent!.name}', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.amber.shade800)),
-                        const SizedBox(width: 6),
-                        Pill(activeEvent!.severity.name, tone: activeEvent!.severity == FieldEventSeverity.high ? PillTone.bad : PillTone.warn),
-                      ]),
-                      Text(activeEvent!.description, style: const TextStyle(fontSize: 12)),
-                    ],
+            accentColor: AppColors.warn,
+            child: InkWell(
+              onTap: () => _showFieldEventDetails(activeEvent!),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(iconForName(activeEvent!.icon), color: Colors.amber.shade700),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(child: Text('Field Event: ${activeEvent!.name}', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.amber.shade800))),
+                          Pill(activeEvent!.severity.name, tone: activeEvent!.severity == FieldEventSeverity.high ? PillTone.bad : PillTone.warn),
+                        ]),
+                        Text(activeEvent!.description, style: AppText.body, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const Icon(Icons.chevron_right, size: 18),
+                ],
+              ),
             ),
           ),
-        const SizedBox(height: 10),
-        Text('Generation $label', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        Text('Method: ${methodInfo.name} · progress ${genIndex + 1}/$targetGenerations', style: const TextStyle(fontSize: 11)),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
+        Text('Generation $label', style: AppText.sectionTitle),
+        Text('Method: ${methodInfo.name} · progress ${genIndex + 1}/$targetGenerations', style: AppText.caption),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(spacing: 8, runSpacing: 8, children: [
           OutlinedButton(onPressed: () => _selectTopN(4), child: const Text('Auto-select Top 4')),
           if (readyToRelease)
@@ -366,31 +401,32 @@ class _BreederScreenState extends State<BreederScreen> {
           else
             ElevatedButton(onPressed: selectedCount >= 2 ? _advance : null, child: Text('Advance Generation ($selectedCount selected)')),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.md),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: gen.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.78),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.8),
           itemBuilder: (context, i) {
             final ind = gen[i];
             return AppCard(
               padding: const EdgeInsets.all(10),
+              accentColor: ind.selected ? _accent : null,
               child: InkWell(
                 onTap: () => _toggleSelect(ind.id),
-                child: Container(
-                  decoration: ind.selected ? BoxDecoration(border: Border.all(color: const Color(0xFF059669), width: 2), borderRadius: BorderRadius.circular(10)) : null,
-                  padding: const EdgeInsets.all(2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text(ind.label.split(' ')[0], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
-                        Pill('${scoreIndividual(ind, crop!)}', tone: PillTone.info),
-                      ]),
-                      for (final t in crop!.traits.take(3)) TraitBarWidget(trait: t, value: ind.traitValues[t.id] ?? 0.5),
-                    ],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Expanded(child: Text(ind.label.split(' ')[0], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
+                      GestureDetector(
+                        onTap: () => _showIndividualDetails(ind),
+                        child: Pill('${scoreIndividual(ind, crop!)}', tone: PillTone.info),
+                      ),
+                    ]),
+                    for (final t in crop!.traits.take(2)) TraitBarWidget(trait: t, value: ind.traitValues[t.id] ?? 0.5),
+                    if (ind.selected) Icon(Icons.check_circle, size: 14, color: _accent),
+                  ],
                 ),
               ),
             );
@@ -400,23 +436,55 @@ class _BreederScreenState extends State<BreederScreen> {
     );
   }
 
+  void _showFieldEventDetails(FieldEvent e) {
+    showDetailSheet(
+      context,
+      title: e.name,
+      subtitle: '${e.severity.name} severity',
+      icon: iconForName(e.icon),
+      accentColor: AppColors.warn,
+      children: [
+        DetailSection(label: 'What happened', text: e.description),
+        if (e.favors.isNotEmpty) DetailBulletList(label: 'Favors traits', items: e.favors, bulletColor: AppColors.good),
+      ],
+    );
+  }
+
+  void _showIndividualDetails(Individual ind) {
+    showDetailSheet(
+      context,
+      title: ind.label,
+      subtitle: 'Score ${scoreIndividual(ind, crop!)}/100 · Heterozygosity ${(ind.heterozygosity * 100).round()}%',
+      icon: Icons.grain,
+      accentColor: _accent,
+      children: [
+        Text('FULL TRAIT PROFILE', style: AppText.statLabel),
+        const SizedBox(height: 4),
+        for (final t in crop!.traits) TraitBarWidget(trait: t, value: ind.traitValues[t.id] ?? 0.5),
+        const SizedBox(height: AppSpacing.sm),
+        DetailBulletList(label: 'Genotype', items: [for (final entry in ind.genotype.entries) '${entry.key}: ${entry.value}'], bulletColor: _accent),
+      ],
+    );
+  }
+
   Widget _buildReleaseStep() {
     final currentGen = generations[genIndex];
     final best = ([...currentGen]..sort((a, b) => scoreIndividual(b, crop!).compareTo(scoreIndividual(a, crop!)))).first;
     return AppCard(
+      accentColor: _accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CardTitle('Release Candidate: Best Line'),
           Pill('Score: ${scoreIndividual(best, crop!)}/100', tone: PillTone.good),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           for (final t in crop!.traits) TraitBarWidget(trait: t, value: best.traitValues[t.id] ?? 0.5),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md),
           TextField(
             decoration: InputDecoration(hintText: 'e.g. ${crop!.name}-Champion-1', border: const OutlineInputBorder()),
             onChanged: (v) => releasedName = v,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md),
           ElevatedButton.icon(onPressed: _releaseVariety, icon: const Icon(Icons.emoji_events, size: 16), label: const Text('Release Variety')),
         ],
       ),
@@ -425,14 +493,15 @@ class _BreederScreenState extends State<BreederScreen> {
 
   Widget _buildReleasedCard() {
     return AppCard(
+      accentColor: _accent,
       child: Column(
         children: [
-          const Icon(Icons.emoji_events, color: Colors.amber, size: 40),
-          const SizedBox(height: 8),
+          Icon(Icons.emoji_events, color: _accent, size: 40),
+          const SizedBox(height: AppSpacing.sm),
           Text('🎉 "${released!.name}" Released!', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           Text('Final performance score: ${released!.score}/100. Saved to your research record.', textAlign: TextAlign.center),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           ElevatedButton.icon(onPressed: _reset, icon: const Icon(Icons.auto_awesome, size: 16), label: const Text('Breed Another Variety')),
         ],
       ),

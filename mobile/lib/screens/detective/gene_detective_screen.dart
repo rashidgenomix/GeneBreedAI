@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/crops.dart';
 import '../../data/detective_cases.dart';
 import '../../state/game_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/detail_sheet.dart';
 import '../../widgets/icon_map.dart';
+
+final _accent = moduleTheme(ModuleId.detective).color;
 
 class GeneDetectiveScreen extends StatefulWidget {
   const GeneDetectiveScreen({super.key});
@@ -48,29 +54,41 @@ class _GeneDetectiveScreenState extends State<GeneDetectiveScreen> {
     }
   }
 
+  void _showCaseSymptoms(DetectiveCase c) {
+    showDetailSheet(
+      context,
+      title: c.title,
+      subtitle: crops.firstWhere((cr) => cr.id == c.cropId, orElse: () => crops.first).name,
+      icon: Icons.search,
+      accentColor: _accent,
+      children: [
+        DetailBulletList(label: 'Observed symptoms', items: c.symptoms, bulletColor: _accent),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     if (activeCase == null) {
       return SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('🔍 AI Gene Detective', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            const Text('A mystery mutant has appeared. Gather clues with real investigative tools, then propose and defend a hypothesis.', style: TextStyle(fontSize: 13)),
-            const SizedBox(height: 12),
+            Text('A mystery mutant has appeared in each case below. Gather clues, then defend a hypothesis.', style: AppText.body),
+            const SizedBox(height: AppSpacing.md),
             for (final c in detectiveCases)
-              AppCard(
-                child: InkWell(
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: EntityCard(
+                  icon: Icons.search,
+                  accentColor: _accent,
+                  title: c.title,
+                  description: '${c.symptoms.length} symptoms · ${c.clues.length} clues to gather',
                   onTap: () => _openCase(c),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CardTitle(c.title),
-                      for (final s in c.symptoms) Text('• $s', style: const TextStyle(fontSize: 12)),
-                    ],
-                  ),
+                  onViewDetails: () => _showCaseSymptoms(c),
                 ),
               ),
           ],
@@ -80,61 +98,74 @@ class _GeneDetectiveScreenState extends State<GeneDetectiveScreen> {
 
     final c = activeCase!;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(c.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+              Expanded(child: Text(c.title, style: AppText.sectionTitle)),
               TextButton(onPressed: () => setState(() => activeCase = null), child: const Text('← Case Files')),
             ],
           ),
           AppCard(
+            accentColor: _accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CardTitle('Observed Symptoms'),
-                for (final s in c.symptoms) Text('• $s', style: const TextStyle(fontSize: 13)),
+                for (final s in c.symptoms) Text('• $s', style: AppText.body),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          const Text('INVESTIGATION TOOLS — tap to run a test', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey)),
-          const SizedBox(height: 6),
-          for (final clue in c.clues)
-            AppCard(
-              child: InkWell(
-                onTap: () => setState(() => revealedClues.add(clue.tool)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Icon(iconForName(clue.icon), size: 18, color: const Color(0xFF059669)),
-                      const SizedBox(width: 8),
-                      Text(clue.tool, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    ]),
-                    if (revealedClues.contains(clue.tool)) Padding(padding: const EdgeInsets.only(top: 6), child: Text(clue.text, style: const TextStyle(fontSize: 12))),
-                  ],
+          const SizedBox(height: AppSpacing.md),
+          Text('INVESTIGATION TOOLS — tap to run a test', style: AppText.statLabel),
+          const SizedBox(height: AppSpacing.sm),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: c.clues.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.4),
+            itemBuilder: (context, i) {
+              final clue = c.clues[i];
+              final revealed = revealedClues.contains(clue.tool);
+              return AppCard(
+                accentColor: revealed ? _accent : null,
+                padding: const EdgeInsets.all(10),
+                child: InkWell(
+                  onTap: () => setState(() => revealedClues.add(clue.tool)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(iconForName(clue.icon), size: 16, color: revealed ? _accent : Colors.grey),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(clue.tool, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      ]),
+                      if (revealed)
+                        Padding(padding: const EdgeInsets.only(top: 6), child: Text(clue.text, style: const TextStyle(fontSize: 11)))
+                      else
+                        Padding(padding: const EdgeInsets.only(top: 6), child: Text('Tap to run test', style: AppText.caption)),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          const SizedBox(height: 10),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
           AppCard(
+            accentColor: _accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CardTitle('Propose Your Hypothesis'),
-                const Text('Which explanation is best supported by all the evidence you gathered?', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                const SizedBox(height: 8),
+                Text('Which explanation is best supported by all the evidence you gathered?', style: AppText.caption),
+                const SizedBox(height: AppSpacing.sm),
                 for (final opt in options)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Card(
-                      color: answer != null
-                          ? (opt == c.correctHypothesis ? const Color(0x2210B981) : (opt == answer ? const Color(0x22F43F5E) : null))
-                          : null,
+                      color: answer != null ? (opt == c.correctHypothesis ? AppColors.good.withValues(alpha: 0.12) : (opt == answer ? AppColors.bad.withValues(alpha: 0.12) : null)) : null,
                       child: ListTile(
                         onTap: answer == null ? () => _submit(opt) : null,
                         title: Text(opt, style: const TextStyle(fontSize: 13)),
@@ -147,12 +178,12 @@ class _GeneDetectiveScreenState extends State<GeneDetectiveScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          Icon(correct! ? Icons.check_circle : Icons.cancel, color: correct! ? const Color(0xFF059669) : const Color(0xFFF43F5E), size: 18),
+                          Icon(correct! ? Icons.check_circle : Icons.cancel, color: correct! ? AppColors.good : AppColors.bad, size: 18),
                           const SizedBox(width: 6),
-                          Text(correct! ? 'Well reasoned!' : 'Not quite — re-examine the evidence.', style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Expanded(child: Text(correct! ? 'Well reasoned!' : 'Not quite — re-examine the evidence.', style: const TextStyle(fontWeight: FontWeight.w700))),
                         ]),
                         const SizedBox(height: 6),
-                        Text(c.explanation, style: const TextStyle(fontSize: 12)),
+                        Text(c.explanation, style: AppText.body),
                         const SizedBox(height: 6),
                         Pill('Culprit: ${c.culpritGene}', tone: PillTone.info),
                       ],

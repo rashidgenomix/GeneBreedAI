@@ -26,6 +26,8 @@ class GameProvider extends ChangeNotifier {
   int grants = 0;
   ThemeMode themeMode = ThemeMode.light;
   List<String> completedMissionIds = [];
+  int dailyStreak = 0;
+  String? _lastActiveDate; // yyyy-MM-dd
 
   bool _loaded = false;
   bool get loaded => _loaded;
@@ -42,10 +44,30 @@ class GameProvider extends ChangeNotifier {
       grants = json['grants'] ?? 0;
       themeMode = (json['theme'] == 'dark') ? ThemeMode.dark : ThemeMode.light;
       completedMissionIds = List<String>.from(json['completedMissionIds'] ?? []);
+      dailyStreak = json['dailyStreak'] ?? 0;
+      _lastActiveDate = json['lastActiveDate'];
     }
+    _touchStreak();
     _loaded = true;
     notifyListeners();
   }
+
+  /// Increments the daily streak the first time the app is opened on a new calendar day;
+  /// resets to 1 if a day (or more) was skipped, matching the mission cadence's daily reset.
+  void _touchStreak() {
+    final today = _dateKey(DateTime.now());
+    if (_lastActiveDate == today) return;
+    if (_lastActiveDate != null) {
+      final yesterday = _dateKey(DateTime.now().subtract(const Duration(days: 1)));
+      dailyStreak = (_lastActiveDate == yesterday) ? dailyStreak + 1 : 1;
+    } else {
+      dailyStreak = 1;
+    }
+    _lastActiveDate = today;
+    _persist();
+  }
+
+  String _dateKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
@@ -57,6 +79,8 @@ class GameProvider extends ChangeNotifier {
       'grants': grants,
       'theme': themeMode == ThemeMode.dark ? 'dark' : 'light',
       'completedMissionIds': completedMissionIds,
+      'dailyStreak': dailyStreak,
+      'lastActiveDate': _lastActiveDate,
     };
     await prefs.setString(_prefsKey, jsonEncode(json));
   }

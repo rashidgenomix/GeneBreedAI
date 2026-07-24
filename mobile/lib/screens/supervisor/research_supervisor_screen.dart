@@ -4,7 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../data/supervisor_questions.dart';
 import '../../state/game_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/module_theme.dart';
 import '../../widgets/app_card.dart';
+
+final _accent = moduleTheme(ModuleId.supervisor).color;
 
 enum ReasoningStrength { weak, developing, strong }
 
@@ -79,17 +83,17 @@ class _ResearchSupervisorScreenState extends State<ResearchSupervisorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('🎓 AI Research Supervisor', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text("The supervisor never hands you answers. It interrogates your reasoning and only offers a hint when you're stuck.", style: TextStyle(fontSize: 13)),
-          const SizedBox(height: 12),
+          Text("The supervisor never hands you answers. It interrogates your reasoning and only offers a hint when you're stuck.", style: AppText.body),
+          const SizedBox(height: AppSpacing.md),
           if (!started)
             AppCard(
+              accentColor: _accent,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -103,7 +107,7 @@ class _ResearchSupervisorScreenState extends State<ResearchSupervisorScreen> {
               ),
             ),
           if (started) ...[
-            AppCard(child: Text('Your claim: "${topicController.text}"', style: const TextStyle(fontStyle: FontStyle.italic))),
+            AppCard(accentColor: _accent, child: Text('Your claim: "${topicController.text}"', style: const TextStyle(fontStyle: FontStyle.italic))),
             const SizedBox(height: 10),
             for (final t in turns)
               Padding(
@@ -112,7 +116,7 @@ class _ResearchSupervisorScreenState extends State<ResearchSupervisorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: const [Icon(Icons.school, size: 16, color: Color(0xFF059669)), SizedBox(width: 6), Text('Supervisor asks:', style: TextStyle(fontWeight: FontWeight.w700))]),
+                      Row(children: [Icon(Icons.school, size: 16, color: _accent), const SizedBox(width: 6), const Text('Supervisor asks:', style: TextStyle(fontWeight: FontWeight.w700))]),
                       Text(t.prompt.question, style: const TextStyle(fontSize: 13)),
                       const SizedBox(height: 6),
                       Container(
@@ -131,10 +135,11 @@ class _ResearchSupervisorScreenState extends State<ResearchSupervisorScreen> {
               ),
             if (currentPrompt != null)
               AppCard(
+                accentColor: _accent,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: const [Icon(Icons.school, size: 16, color: Color(0xFF059669)), SizedBox(width: 6), Text('Supervisor asks:', style: TextStyle(fontWeight: FontWeight.w700))]),
+                    Row(children: [Icon(Icons.school, size: 16, color: _accent), const SizedBox(width: 6), const Text('Supervisor asks:', style: TextStyle(fontWeight: FontWeight.w700))]),
                     Text(currentPrompt!.question, style: const TextStyle(fontSize: 13)),
                     const SizedBox(height: 8),
                     TextField(controller: responseController, maxLines: 3, decoration: const InputDecoration(hintText: 'Respond with your reasoning...', border: OutlineInputBorder())),
