@@ -24,7 +24,7 @@ if (hasKeystoreProperties) {
 }
 
 android {
-    namespace = "com.genebreedai.genebreed_ai"
+    namespace = "com.genebreedai.genebreedai"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -34,8 +34,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.genebreedai.genebreed_ai"
+        // Matches the iOS bundle_identifier (com.genebreedai.genebreedai) so both platforms
+        // share one app identity across stores, deep links, and CI config.
+        applicationId = "com.genebreedai.genebreedai"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

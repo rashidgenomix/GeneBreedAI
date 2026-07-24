@@ -2,7 +2,10 @@ workflows:
   android-workflow:
     name: GeneBreed AI — Android (APK + AAB)
     max_build_duration: 60
-    instance_type: linux_x2
+    # macOS instances are used for both platforms: Codemagic's free tier includes 500 free
+    # build minutes/month on mac_mini_m2 but none on Linux instances, and Flutter builds
+    # Android APKs/AABs fine on a Mac runner.
+    instance_type: mac_mini_m2
     environment:
       flutter: stable
       java: 17
@@ -14,7 +17,7 @@ workflows:
         #   ANDROID_KEY_PASSWORD        – key password
         - android_signing
       vars:
-        PACKAGE_NAME: "com.genebreedai.genebreed_ai"
+        PACKAGE_NAME: "com.genebreedai.genebreedai"
     working_directory: mobile
     scripts:
       - name: Decode Android signing keystore
@@ -41,11 +44,16 @@ workflows:
       - name: Build App Bundle (release, for Play Store)
         script: flutter build appbundle --release
     artifacts:
-      - mobile/build/app/outputs/flutter-apk/*.apk
-      - mobile/build/app/outputs/bundle/release/*.aab
+      # Broadened with ** wildcards, plus a fallback without the mobile/ prefix, so the
+      # artifact is found regardless of exactly how Codemagic resolves the working directory.
+      - mobile/build/app/outputs/**/*.apk
+      - mobile/build/app/outputs/**/*.aab
+      - build/app/outputs/**/*.apk
+      - build/app/outputs/**/*.aab
     publishing:
       email:
-        recipients: []
+        recipients:
+          - rashidrao7@gmail.com
         notify:
           success: true
           failure: true
@@ -72,9 +80,9 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.genebreedai.genebreedAi
+        bundle_identifier: com.genebreedai.genebreedai
       vars:
-        BUNDLE_ID: "com.genebreedai.genebreedAi"
+        BUNDLE_ID: "com.genebreedai.genebreedai"
     working_directory: mobile
     scripts:
       - name: Get Flutter packages
@@ -96,11 +104,16 @@ workflows:
           flutter build ipa --release \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
+      # Broadened with ** wildcards, plus a fallback without the mobile/ prefix, so the
+      # artifact is found regardless of exactly how Codemagic resolves the working directory.
       - mobile/build/ios/ipa/*.ipa
+      - mobile/build/ios/**/*.ipa
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       email:
-        recipients: []
+        recipients:
+          - rashidrao7@gmail.com
         notify:
           success: true
           failure: true

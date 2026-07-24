@@ -12,10 +12,14 @@ iOS (IPA) artifacts on Codemagic, using the `codemagic.yaml` already committed a
   API level Flutter officially supports), `minSdk` 24. Release builds are minified with R8
   (`isMinifyEnabled`/`isShrinkResources`) and read signing config from `android/key.properties`,
   which is **git-ignored** — see §2.
-- `mobile/ios/` — bundle identifier `com.genebreedai.genebreedAi`, deployment target iOS 13.0,
-  `NSPhotoLibraryUsageDescription` set for the Field Notebook's image picker.
-- `codemagic.yaml` — an `android-workflow` and an `ios-workflow`, each running `flutter pub get`,
-  `flutter analyze`, `flutter test`, then a release build.
+- `mobile/ios/` — bundle identifier `com.genebreedai.genebreedai`, deployment target iOS 13.0,
+  `NSPhotoLibraryUsageDescription` set for the Field Notebook's image picker. The Android
+  `applicationId`/`namespace` use the same identifier (`com.genebreedai.genebreedai`) so both
+  platforms share one app identity.
+- `codemagic.yaml` — an `android-workflow` and an `ios-workflow`, both on `mac_mini_m2` instances
+  (Codemagic's free tier has no build minutes on Linux instances but includes 500/month on
+  `mac_mini_m2`, and Flutter builds Android APKs/AABs fine on a Mac runner), each running
+  `flutter pub get`, `flutter analyze`, `flutter test`, then a release build.
 - App icon: `mobile/assets/icon/app_icon.png` (+ `app_icon_foreground.png` for Android adaptive
   icons), wired through `flutter_launcher_icons` in `pubspec.yaml`. Already generated into
   `android/app/src/main/res/mipmap-*` and `ios/Runner/Assets.xcassets/AppIcon.appiconset/`; re-run
@@ -61,7 +65,7 @@ iOS code signing requires an active **Apple Developer Program** membership — t
 provisioned from a text-based coding session, so the steps below are things you (the account
 holder) need to do once in the Apple/App Store Connect and Codemagic dashboards.
 
-1. **Register the App ID** in the Apple Developer portal: `com.genebreedai.genebreedAi`
+1. **Register the App ID** in the Apple Developer portal: `com.genebreedai.genebreedai`
    (must match `ios/Runner.xcodeproj`'s `PRODUCT_BUNDLE_IDENTIFIER`, already set to this value).
 2. **Create the app record** in App Store Connect with the same bundle ID.
 3. **Create an App Store Connect API key**: App Store Connect → Users and Access → Integrations →

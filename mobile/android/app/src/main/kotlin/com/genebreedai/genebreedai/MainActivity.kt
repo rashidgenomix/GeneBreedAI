@@ -1,4 +1,4 @@
-package com.genebreedai.genebreed_ai
+package com.genebreedai.genebreedai
 
 import io.flutter.embedding.android.FlutterActivity
 
