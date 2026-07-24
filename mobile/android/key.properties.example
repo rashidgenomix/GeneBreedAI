@@ -1,0 +1,9 @@
+# Copy this file to android/key.properties (which is git-ignored) and fill in real values,
+# or let Codemagic generate it at build time from encrypted environment variables — see
+# docs/MOBILE_DEPLOYMENT.md for the full walkthrough.
+#
+# storeFile is resolved relative to the android/app/ directory.
+storePassword=REPLACE_WITH_KEYSTORE_PASSWORD
+keyPassword=REPLACE_WITH_KEY_PASSWORD
+keyAlias=genebreedai
+storeFile=genebreed-ai-release.jks

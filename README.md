@@ -9,11 +9,14 @@ performing genetic analysis, and solving real agricultural problems.
 
 ```
 frontend/    React + TypeScript + Tailwind web app (the implemented product — see below)
+mobile/      Flutter app (Android + iOS) implementing the same 9 modules natively
 database/    PostgreSQL/Supabase schema: migrations/0001_init.sql, 0002_rls_policies.sql,
              0003_seed_reference_data.sql
 docs/        Full design documentation — architecture, schema, wireframes, user flows,
              navigation map, API structure, AI workflow, screen designs, gamification,
              learning outcomes, tech stack, deployment strategy, roadmap. Start at docs/00-overview.md.
+             MOBILE_DEPLOYMENT.md covers Flutter/Codemagic signing and release setup specifically.
+codemagic.yaml   Codemagic CI config: android-workflow (APK+AAB) and ios-workflow (IPA).
 ```
 
 ## Quick start (frontend)
@@ -28,6 +31,21 @@ npm run build    # production build
 No backend or API keys are required to run and use every module today — game progress and field
 notebook entries persist to `localStorage`. See `docs/07-ai-workflow.md` and `docs/12-deployment.md`
 for how this connects to Supabase + the GPT API in production.
+
+## Quick start (mobile)
+
+```bash
+cd mobile
+flutter pub get
+flutter run              # requires a connected device/emulator or iOS Simulator
+flutter build apk --release      # signed if android/key.properties is present, debug-signed otherwise
+flutter build ipa --release      # requires macOS + Xcode + Apple signing — see docs/MOBILE_DEPLOYMENT.md
+```
+
+The `mobile/` app is a from-scratch Flutter port sharing the same crop/gene/breeding-method data
+and the same genetics simulation logic as the web app, with local persistence via
+`shared_preferences`. See `docs/MOBILE_DEPLOYMENT.md` for the full Codemagic CI/CD and app-signing
+walkthrough (Android keystore + iOS App Store Connect automatic signing).
 
 ## What's implemented
 

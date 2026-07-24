@@ -1,0 +1,111 @@
+workflows:
+  android-workflow:
+    name: GeneBreed AI — Android (APK + AAB)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        # Create this group in Codemagic > Team settings > Environment variables and add:
+        #   ANDROID_KEYSTORE            – base64-encoded .jks file (see docs/MOBILE_DEPLOYMENT.md)
+        #   ANDROID_KEYSTORE_PASSWORD   – keystore password
+        #   ANDROID_KEY_ALIAS           – key alias (e.g. "genebreedai")
+        #   ANDROID_KEY_PASSWORD        – key password
+        - android_signing
+      vars:
+        PACKAGE_NAME: "com.genebreedai.genebreed_ai"
+    working_directory: mobile
+    scripts:
+      - name: Decode Android signing keystore
+        script: |
+          if [ -n "${ANDROID_KEYSTORE:-}" ]; then
+            echo "$ANDROID_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/mobile/android/app/genebreed-ai-release.jks"
+            cat > "$CM_BUILD_DIR/mobile/android/key.properties" <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=genebreed-ai-release.jks
+          EOF
+          else
+            echo "No ANDROID_KEYSTORE env var set — release build will fall back to debug signing."
+          fi
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Analyze
+        script: flutter analyze
+      - name: Run tests
+        script: flutter test
+      - name: Build APK (release)
+        script: flutter build apk --release
+      - name: Build App Bundle (release, for Play Store)
+        script: flutter build appbundle --release
+    artifacts:
+      - mobile/build/app/outputs/flutter-apk/*.apk
+      - mobile/build/app/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients: []
+        notify:
+          success: true
+          failure: true
+      # Uncomment once a Play Console service account JSON is uploaded as GOOGLE_PLAY_CREDENTIALS
+      # in an env var group, to auto-publish to an internal testing track:
+      # google_play:
+      #   credentials: $GOOGLE_PLAY_CREDENTIALS
+      #   track: internal
+      #   submit_as_draft: true
+
+  ios-workflow:
+    name: GeneBreed AI — iOS (IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      # Name of the App Store Connect API key integration configured under
+      # Codemagic > Team settings > Integrations > App Store Connect. See
+      # docs/MOBILE_DEPLOYMENT.md for how to create it — this is the modern
+      # certificate-free "automatic signing" path Apple/Codemagic recommend.
+      app_store_connect: codemagic_asc_api_key
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.genebreedai.genebreedAi
+      vars:
+        BUNDLE_ID: "com.genebreedai.genebreedAi"
+    working_directory: mobile
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Analyze
+        script: flutter analyze
+      - name: Run tests
+        script: flutter test
+      - name: Set up code signing (automatic, via App Store Connect API key)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Flutter build ipa (release)
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients: []
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Set to true once you're ready to submit builds for App Store review automatically.
+        submit_to_app_store: false
